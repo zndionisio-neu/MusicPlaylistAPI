@@ -6,20 +6,21 @@ const Playlist = require("./models/playlist.model");
 
 const app = express();
 
-PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
+const BASE_ENDPOINT = "/api/v1";
 
 require("dotenv").config();
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 
-app.get("/", (_, res) => {
+app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");
   res.status(200);
 });
 
 // GET all playlists
-app.get("/api/v1/playlists", async (_, res) => {
+app.get(`${BASE_ENDPOINT}/playlists`, async (_, res) => {
   try {
     const playlists = await Playlist.find({ deleted: false }).select({
       songs: 0,
@@ -34,7 +35,7 @@ app.get("/api/v1/playlists", async (_, res) => {
 });
 
 // GET a playlist by ID
-app.get("/api/v1/playlists/:playlistId", async (req, res) => {
+app.get(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
   try {
     const playlist = await Playlist.findOne({
       _id: req.params.playlistId,
@@ -50,7 +51,7 @@ app.get("/api/v1/playlists/:playlistId", async (req, res) => {
 });
 
 // GET a playlist by Name
-app.get("/api/v1/playlists/name/:playlistName", async (req, res) => {
+app.get(`${BASE_ENDPOINT}/playlists/name/:playlistName`, async (req, res) => {
   try {
     const playlist = await Playlist.find({
       name: { $regex: req.params.playlistName, $options: "i" },
@@ -66,7 +67,7 @@ app.get("/api/v1/playlists/name/:playlistName", async (req, res) => {
 });
 
 // GET all songs from a playlist by playlistId
-app.get("/api/v1/playlists/:playlistId/songs", async (req, res) => {
+app.get(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, async (req, res) => {
   try {
     const playlist = await Playlist.findOne({
       _id: req.params.playlistId,
@@ -85,27 +86,30 @@ app.get("/api/v1/playlists/:playlistId/songs", async (req, res) => {
 });
 
 // GET a song by songId
-app.get("/api/v1/playlists/:playlistId/songs/:songId", async (req, res) => {
-  try {
-    const playlist = await Playlist.findOne({
-      _id: req.params.playlistId,
-      deleted: false,
-    });
-    if (!playlist || playlist.deleted)
-      return res.status(404).json({ message: "Playlist not found." });
+app.get(
+  `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
+  async (req, res) => {
+    try {
+      const playlist = await Playlist.findOne({
+        _id: req.params.playlistId,
+        deleted: false,
+      });
+      if (!playlist || playlist.deleted)
+        return res.status(404).json({ message: "Playlist not found." });
 
-    const song = playlist.songs.id(req.params.songId);
-    if (!song || song.deleted === true)
-      return res.status(404).json({ message: "Song not found." });
+      const song = playlist.songs.id(req.params.songId);
+      if (!song || song.deleted === true)
+        return res.status(404).json({ message: "Song not found." });
 
-    res.status(200).json(song);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+      res.status(200).json(song);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+);
 
 // POST a playlist
-app.post("/api/v1/playlists", async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists`, async (req, res) => {
   try {
     const playlist = new Playlist(req.body);
     await playlist.save();
@@ -119,7 +123,7 @@ app.post("/api/v1/playlists", async (req, res) => {
 });
 
 // POST a song in a playlist
-app.post("/api/v1/playlists/:playlistId/songs", async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, async (req, res) => {
   const song = req.body;
   try {
     const playlist = await Playlist.findById(req.params.playlistId);
@@ -140,7 +144,7 @@ app.post("/api/v1/playlists/:playlistId/songs", async (req, res) => {
 });
 
 // UPDATE a playlist's information
-app.put("/api/v1/playlists/:playlistId", async (req, res) => {
+app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
   if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
   try {
     const playlist = await Playlist.findOneAndUpdate(
@@ -165,38 +169,41 @@ app.put("/api/v1/playlists/:playlistId", async (req, res) => {
 });
 
 // UPDATE a song's information
-app.put("/api/v1/playlists/:playlistId/songs/:songId", async (req, res) => {
-  if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
-  try {
-    const playlist = await Playlist.findOne({
-      _id: req.params.playlistId,
-      deleted: false,
-    });
+app.put(
+  `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
+  async (req, res) => {
+    if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
+    try {
+      const playlist = await Playlist.findOne({
+        _id: req.params.playlistId,
+        deleted: false,
+      });
 
-    if (!playlist || playlist.deleted)
-      return res.status(404).json({ message: "Playlist not found." });
+      if (!playlist || playlist.deleted)
+        return res.status(404).json({ message: "Playlist not found." });
 
-    const song = playlist.songs.id(req.params.songId);
-    if (!song || song.deleted === true)
-      return res.status(404).json({ message: "Song not found." });
+      const song = playlist.songs.id(req.params.songId);
+      if (!song || song.deleted === true)
+        return res.status(404).json({ message: "Song not found." });
 
-    if (req.body.title) song.title = req.body.title;
-    if (req.body.artist) song.artist = req.body.artist;
+      if (req.body.title) song.title = req.body.title;
+      if (req.body.artist) song.artist = req.body.artist;
 
-    // Object.assign(song, req.params.body);
-    playlist.save();
+      // Object.assign(song, req.params.body);
+      playlist.save();
 
-    return res.status(201).json({
-      message: "Song has been updated",
-      document: song,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+      return res.status(201).json({
+        message: "Song has been updated",
+        document: song,
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+);
 
 // DELETE a playlist
-app.delete("/api/v1/playlists/:playlistId", async (req, res) => {
+app.delete(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
   try {
     const playlist = await Playlist.findOne({
       _id: req.params.playlistId,
@@ -219,30 +226,33 @@ app.delete("/api/v1/playlists/:playlistId", async (req, res) => {
 });
 
 // DELETE a song by songId
-app.delete("/api/v1/playlists/:playlistId/songs/:songId", async (req, res) => {
-  try {
-    const playlist = await Playlist.findOne({
-      _id: req.params.playlistId,
-      deleted: false,
-    });
-    if (!playlist)
-      return res.status(404).json({ message: "Playlist not found." });
+app.delete(
+  `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
+  async (req, res) => {
+    try {
+      const playlist = await Playlist.findOne({
+        _id: req.params.playlistId,
+        deleted: false,
+      });
+      if (!playlist)
+        return res.status(404).json({ message: "Playlist not found." });
 
-    const song = playlist.songs.id(req.params.songId);
-    if (!song || song.deleted === true)
-      return res.status(404).json({ message: "Song not found." });
+      const song = playlist.songs.id(req.params.songId);
+      if (!song || song.deleted === true)
+        return res.status(404).json({ message: "Song not found." });
 
-    song.deleted = true;
-    playlist.save();
+      song.deleted = true;
+      playlist.save();
 
-    res.status(200).json({
-      message: "Song has been removed.",
-      document: song,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+      res.status(200).json({
+        message: "Song has been removed.",
+        document: song,
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+);
 
 async function startServer() {
   try {

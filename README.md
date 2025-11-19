@@ -28,7 +28,7 @@ which is represented in **JSON**.
 
 ### Base Route:
 
-    https://domain.vercel.app/api/v1
+    https://domain.vercel.app/api/v1/
 
 ### GET Routes
 
