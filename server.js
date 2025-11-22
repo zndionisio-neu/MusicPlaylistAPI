@@ -10,71 +10,97 @@ const PORT = process.env.PORT || 3000;
 const BASE_ENDPOINT = "/api/v1";
 
 require("dotenv").config();
-app.use(express.json());
+
+// Increase JSON payload limit and support urlencoded bodies
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
 
-// Validation middleware applied via app.use()
-// - POST /api/v1/playlists -> requires `name` and `author` (non-empty strings)
-//   optional `songs` array items will be validated minimally if present
-// - POST /api/v1/playlists/:playlistId/songs -> requires `title` and `artist` (non-empty strings)
+// --- Helper validation functions (kept inline, reusable) ---
+const validateObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
+const validateUsername = (username) => /^[a-zA-Z0-9_]{3,30}$/.test(username);
+const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const sanitizeString = (str) => (typeof str === "string" ? str.trim() : str);
+
+// --- General sanitization middleware ---
 app.use((req, res, next) => {
   try {
-    // Only validate POST requests
-    if (req.method !== "POST") return next();
-
-    const isPlaylistCreate = req.path === `${BASE_ENDPOINT}/playlists`;
-
-    // matches /api/v1/playlists/:playlistId/songs
-    const songCreateRegex = new RegExp(`${BASE_ENDPOINT.replace(/\//g, "\\/")}\\/playlists\\/[^\\/]+\\/songs$`);
-    const isSongCreate = songCreateRegex.test(req.path);
-
-    if (!isPlaylistCreate && !isSongCreate) return next();
-
-    // Helper inline validators (kept minimal)
-    const isNonEmptyString = (v) => typeof v === "string" && v.trim() !== "";
-
-    if (isPlaylistCreate) {
-      const { name, author, songs } = req.body || {};
-      if (!isNonEmptyString(name)) {
-        return res.status(400).json({ message: "Playlist 'name' is required and must be a non-empty string." });
-      }
-      if (!isNonEmptyString(author)) {
-        return res.status(400).json({ message: "Playlist 'author' is required and must be a non-empty string." });
-      }
-
-      // If `songs` is provided, ensure it's an array and items have required fields
-      if (songs !== undefined) {
-        if (!Array.isArray(songs)) {
-          return res.status(400).json({ message: "Playlist 'songs' must be an array if provided." });
-        }
-        for (let i = 0; i < songs.length; i++) {
-          const s = songs[i] || {};
-          if (!isNonEmptyString(s.title)) {
-            return res.status(400).json({ message: `Song at index ${i} must have a non-empty 'title'.` });
-          }
-          if (!isNonEmptyString(s.artist)) {
-            return res.status(400).json({ message: `Song at index ${i} must have a non-empty 'artist'.` });
-          }
-        }
-      }
+    // Trim strings in body, query and params
+    if (req.body && typeof req.body === "object") {
+      Object.keys(req.body).forEach((k) => {
+        req.body[k] = sanitizeString(req.body[k]);
+      });
     }
-
-    if (isSongCreate) {
-      const { title, artist } = req.body || {};
-      if (!isNonEmptyString(title)) {
-        return res.status(400).json({ message: "Song 'title' is required and must be a non-empty string." });
-      }
-      if (!isNonEmptyString(artist)) {
-        return res.status(400).json({ message: "Song 'artist' is required and must be a non-empty string." });
-      }
+    if (req.query && typeof req.query === "object") {
+      Object.keys(req.query).forEach((k) => {
+        req.query[k] = sanitizeString(req.query[k]);
+      });
     }
-
+    if (req.params && typeof req.params === "object") {
+      Object.keys(req.params).forEach((k) => {
+        req.params[k] = sanitizeString(req.params[k]);
+      });
+    }
     return next();
   } catch (err) {
-    return res.status(500).json({ message: "Validation middleware error." });
+    return next(err);
   }
 });
+
+// --- Route validation middlewares ---
+const validatePlaylistMiddleware = (req, res, next) => {
+  const { playlistId } = req.params;
+  if (playlistId && !validateObjectId(playlistId)) {
+    return res.status(400).json({ error: "Invalid playlist ID" });
+  }
+  return next();
+};
+
+const validateUserMiddleware = (req, res, next) => {
+  const { userId, username } = req.params;
+  if (userId && !validateObjectId(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+  if (username && !validateUsername(username)) {
+    return res.status(400).json({ error: "Invalid username format" });
+  }
+  return next();
+};
+
+// Validate playlist payload for create/update
+const validatePlaylistData = (req, res, next) => {
+  const { name, author, songs } = req.body || {};
+  if (!name || typeof name !== "string" || name.trim().length === 0) {
+    return res.status(400).json({ error: "Playlist name is required" });
+  }
+  if (name.length > 100) {
+    return res.status(400).json({ error: "Playlist name too long (max 100 characters)" });
+  }
+  if (!author || typeof author !== "string" || author.trim().length === 0) {
+    return res.status(400).json({ error: "Playlist author is required" });
+  }
+  if (songs !== undefined) {
+    if (!Array.isArray(songs)) return res.status(400).json({ error: "Playlist 'songs' must be an array if provided" });
+    for (let i = 0; i < songs.length; i++) {
+      const s = songs[i] || {};
+      if (!s.title || typeof s.title !== "string" || s.title.trim() === "") return res.status(400).json({ error: `Song at index ${i} must have a non-empty 'title'` });
+      if (!s.artist || typeof s.artist !== "string" || s.artist.trim() === "") return res.status(400).json({ error: `Song at index ${i} must have a non-empty 'artist'` });
+    }
+  }
+  return next();
+};
+
+const validateSongData = (req, res, next) => {
+  const { title, artist } = req.body || {};
+  if (!title || typeof title !== "string" || title.trim().length === 0) {
+    return res.status(400).json({ error: "Song title is required" });
+  }
+  if (!artist || typeof artist !== "string" || artist.trim().length === 0) {
+    return res.status(400).json({ error: "Song artist is required" });
+  }
+  return next();
+};
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");
@@ -97,7 +123,7 @@ app.get(`${BASE_ENDPOINT}/playlists`, async (_, res) => {
 });
 
 // GET a playlist by ID
-app.get(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
+app.get(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, async (req, res) => {
   try {
     const playlist = await Playlist.findOne({
       _id: req.params.playlistId,
@@ -129,7 +155,7 @@ app.get(`${BASE_ENDPOINT}/playlists/name/:playlistName`, async (req, res) => {
 });
 
 // GET all songs from a playlist by playlistId
-app.get(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, async (req, res) => {
+app.get(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddleware, async (req, res) => {
   try {
     const playlist = await Playlist.findOne({
       _id: req.params.playlistId,
@@ -150,6 +176,7 @@ app.get(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, async (req, res) => {
 // GET a song by songId
 app.get(
   `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
+  validatePlaylistMiddleware,
   async (req, res) => {
     try {
       const playlist = await Playlist.findOne({
@@ -171,7 +198,7 @@ app.get(
 );
 
 // POST a playlist
-app.post(`${BASE_ENDPOINT}/playlists`, async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists`, validatePlaylistData, async (req, res) => {
   try {
     const playlist = new Playlist(req.body);
     await playlist.save();
@@ -185,7 +212,7 @@ app.post(`${BASE_ENDPOINT}/playlists`, async (req, res) => {
 });
 
 // POST a song in a playlist
-app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddleware, validateSongData, async (req, res) => {
   const song = req.body;
   try {
     const playlist = await Playlist.findById(req.params.playlistId);
@@ -206,7 +233,7 @@ app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, async (req, res) => {
 });
 
 // UPDATE a playlist's information
-app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
+app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, validatePlaylistData, async (req, res) => {
   if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
   try {
     const playlist = await Playlist.findOneAndUpdate(
@@ -233,6 +260,8 @@ app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
 // UPDATE a song's information
 app.put(
   `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
+  validatePlaylistMiddleware,
+  validateSongData,
   async (req, res) => {
     if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
     try {
@@ -265,7 +294,7 @@ app.put(
 );
 
 // DELETE a playlist
-app.delete(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
+app.delete(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, async (req, res) => {
   try {
     const playlist = await Playlist.findOne({
       _id: req.params.playlistId,
@@ -290,6 +319,7 @@ app.delete(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
 // DELETE a song by songId
 app.delete(
   `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
+  validatePlaylistMiddleware,
   async (req, res) => {
     try {
       const playlist = await Playlist.findOne({
@@ -315,6 +345,17 @@ app.delete(
     }
   },
 );
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Error:", err);
+  res.status(500).json({ error: "Server error" });
+});
 
 async function startServer() {
   try {
