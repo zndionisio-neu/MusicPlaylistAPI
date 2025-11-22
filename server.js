@@ -14,6 +14,68 @@ app.use(express.json());
 app.use(cors());
 app.use(helmet());
 
+// Validation middleware applied via app.use()
+// - POST /api/v1/playlists -> requires `name` and `author` (non-empty strings)
+//   optional `songs` array items will be validated minimally if present
+// - POST /api/v1/playlists/:playlistId/songs -> requires `title` and `artist` (non-empty strings)
+app.use((req, res, next) => {
+  try {
+    // Only validate POST requests
+    if (req.method !== "POST") return next();
+
+    const isPlaylistCreate = req.path === `${BASE_ENDPOINT}/playlists`;
+
+    // matches /api/v1/playlists/:playlistId/songs
+    const songCreateRegex = new RegExp(`${BASE_ENDPOINT.replace(/\//g, "\\/")}\\/playlists\\/[^\\/]+\\/songs$`);
+    const isSongCreate = songCreateRegex.test(req.path);
+
+    if (!isPlaylistCreate && !isSongCreate) return next();
+
+    // Helper inline validators (kept minimal)
+    const isNonEmptyString = (v) => typeof v === "string" && v.trim() !== "";
+
+    if (isPlaylistCreate) {
+      const { name, author, songs } = req.body || {};
+      if (!isNonEmptyString(name)) {
+        return res.status(400).json({ message: "Playlist 'name' is required and must be a non-empty string." });
+      }
+      if (!isNonEmptyString(author)) {
+        return res.status(400).json({ message: "Playlist 'author' is required and must be a non-empty string." });
+      }
+
+      // If `songs` is provided, ensure it's an array and items have required fields
+      if (songs !== undefined) {
+        if (!Array.isArray(songs)) {
+          return res.status(400).json({ message: "Playlist 'songs' must be an array if provided." });
+        }
+        for (let i = 0; i < songs.length; i++) {
+          const s = songs[i] || {};
+          if (!isNonEmptyString(s.title)) {
+            return res.status(400).json({ message: `Song at index ${i} must have a non-empty 'title'.` });
+          }
+          if (!isNonEmptyString(s.artist)) {
+            return res.status(400).json({ message: `Song at index ${i} must have a non-empty 'artist'.` });
+          }
+        }
+      }
+    }
+
+    if (isSongCreate) {
+      const { title, artist } = req.body || {};
+      if (!isNonEmptyString(title)) {
+        return res.status(400).json({ message: "Song 'title' is required and must be a non-empty string." });
+      }
+      if (!isNonEmptyString(artist)) {
+        return res.status(400).json({ message: "Song 'artist' is required and must be a non-empty string." });
+      }
+    }
+
+    return next();
+  } catch (err) {
+    return res.status(500).json({ message: "Validation middleware error." });
+  }
+});
+
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");
   res.status(200);
