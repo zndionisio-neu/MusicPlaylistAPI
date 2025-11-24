@@ -68,39 +68,8 @@ const validateUserMiddleware = (req, res, next) => {
   return next();
 };
 
-// Validate playlist payload for create/update
-const validatePlaylistData = (req, res, next) => {
-  const { name, author, songs } = req.body || {};
-  if (!name || typeof name !== "string" || name.trim().length === 0) {
-    return res.status(400).json({ error: "Playlist name is required" });
-  }
-  if (name.length > 100) {
-    return res.status(400).json({ error: "Playlist name too long (max 100 characters)" });
-  }
-  if (!author || typeof author !== "string" || author.trim().length === 0) {
-    return res.status(400).json({ error: "Playlist author is required" });
-  }
-  if (songs !== undefined) {
-    if (!Array.isArray(songs)) return res.status(400).json({ error: "Playlist 'songs' must be an array if provided" });
-    for (let i = 0; i < songs.length; i++) {
-      const s = songs[i] || {};
-      if (!s.title || typeof s.title !== "string" || s.title.trim() === "") return res.status(400).json({ error: `Song at index ${i} must have a non-empty 'title'` });
-      if (!s.artist || typeof s.artist !== "string" || s.artist.trim() === "") return res.status(400).json({ error: `Song at index ${i} must have a non-empty 'artist'` });
-    }
-  }
-  return next();
-};
-
-const validateSongData = (req, res, next) => {
-  const { title, artist } = req.body || {};
-  if (!title || typeof title !== "string" || title.trim().length === 0) {
-    return res.status(400).json({ error: "Song title is required" });
-  }
-  if (!artist || typeof artist !== "string" || artist.trim().length === 0) {
-    return res.status(400).json({ error: "Song artist is required" });
-  }
-  return next();
-};
+// Lightweight validators moved to middleware/validate.js
+const { validatePlaylist, validateSong } = require("./middleware/validate");
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");
@@ -198,7 +167,7 @@ app.get(
 );
 
 // POST a playlist
-app.post(`${BASE_ENDPOINT}/playlists`, validatePlaylistData, async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists`, validatePlaylist, async (req, res) => {
   try {
     const playlist = new Playlist(req.body);
     await playlist.save();
@@ -212,7 +181,7 @@ app.post(`${BASE_ENDPOINT}/playlists`, validatePlaylistData, async (req, res) =>
 });
 
 // POST a song in a playlist
-app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddleware, validateSongData, async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddleware, validateSong, async (req, res) => {
   const song = req.body;
   try {
     const playlist = await Playlist.findById(req.params.playlistId);
@@ -233,7 +202,7 @@ app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddlew
 });
 
 // UPDATE a playlist's information
-app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, validatePlaylistData, async (req, res) => {
+app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, validatePlaylist, async (req, res) => {
   if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
   try {
     const playlist = await Playlist.findOneAndUpdate(
@@ -261,7 +230,7 @@ app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, va
 app.put(
   `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
   validatePlaylistMiddleware,
-  validateSongData,
+  validateSong,
   async (req, res) => {
     if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
     try {
