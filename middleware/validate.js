@@ -1,5 +1,3 @@
-// Simple validation middleware for Playlist and Songs
-
 function validatePlaylist(req, res, next) {
   const { name, description, songs, author } = req.body || {};
 
@@ -19,7 +17,7 @@ function validatePlaylist(req, res, next) {
     return res.status(400).json({ error: "'songs' must be an array." });
   }
 
-  // If songs provided, do a minimal per-item check
+// Kapag may songs, mag-check ng basic validation sa bawat item
   if (Array.isArray(songs)) {
     for (let i = 0; i < songs.length; i++) {
       const s = songs[i] || {};

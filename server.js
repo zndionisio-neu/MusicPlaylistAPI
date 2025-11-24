@@ -68,7 +68,7 @@ const validateUserMiddleware = (req, res, next) => {
   return next();
 };
 
-// Lightweight validators moved to middleware/validate.js
+// validators moved to middleware/validate.js
 const { validatePlaylist, validateSong } = require("./middleware/validate");
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
