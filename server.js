@@ -11,22 +11,22 @@ const BASE_ENDPOINT = "/api/v1";
 
 require("dotenv").config();
 
-// Increase JSON payload limit and support urlencoded bodies
+// Accept either MONGODB_URI or MONGO_URI
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
 
-// --- Helper validation functions (kept inline, reusable) ---
 const validateObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
 const validateUsername = (username) => /^[a-zA-Z0-9_]{3,30}$/.test(username);
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const sanitizeString = (str) => (typeof str === "string" ? str.trim() : str);
 
-// --- General sanitization middleware ---
 app.use((req, res, next) => {
   try {
-    // Trim strings in body, query and params
+
     if (req.body && typeof req.body === "object") {
       Object.keys(req.body).forEach((k) => {
         req.body[k] = sanitizeString(req.body[k]);
@@ -328,8 +328,13 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB Atlas");
+    if (!MONGO_URI) {
+      console.error("Failed to connect: MONGODB_URI or MONGO_URI is not set.");
+      return;
+    }
+
+    await mongoose.connect(MONGO_URI);
+    console.log("Connected to MongoDB");
     app.listen(PORT, () =>
       console.log(`Music Playlist API is running on port ${PORT}`),
     );
