@@ -1,46 +1,62 @@
+class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ValidationError';
+    this.status = 400;
+  }
+}
+
 function validatePlaylist(req, res, next) {
-  const { name, description, songs, author } = req.body || {};
+  try {
+    const { name, description, songs, author } = req.body || {};
 
-  if (!name || typeof name !== "string") {
-    return res.status(400).json({ error: "Playlist 'name' is required and must be a string." });
-  }
-
-  if (description && typeof description !== "string") {
-    return res.status(400).json({ error: "Playlist 'description' must be a string." });
-  }
-
-  if (author && typeof author !== "string") {
-    return res.status(400).json({ error: "Playlist 'author' must be a string." });
-  }
-
-  if (songs !== undefined && !Array.isArray(songs)) {
-    return res.status(400).json({ error: "'songs' must be an array." });
-  }
-
-// Kapag may songs, mag-check ng basic validation sa bawat item
-  if (Array.isArray(songs)) {
-    for (let i = 0; i < songs.length; i++) {
-      const s = songs[i] || {};
-      if (!s.title || typeof s.title !== "string") return res.status(400).json({ error: `Song at index ${i} must have a string 'title'.` });
-      if (!s.artist || typeof s.artist !== "string") return res.status(400).json({ error: `Song at index ${i} must have a string 'artist'.` });
+    if (!name || typeof name !== 'string') {
+      throw new ValidationError("Playlist 'name' is required and must be a string.");
     }
-  }
 
-  return next();
+    if (description && typeof description !== 'string') {
+      throw new ValidationError("Playlist 'description' must be a string.");
+    }
+
+    if (author && typeof author !== 'string') {
+      throw new ValidationError("Playlist 'author' must be a string.");
+    }
+
+    if (songs !== undefined && !Array.isArray(songs)) {
+      throw new ValidationError("'songs' must be an array.");
+    }
+
+    // If songs provided, validate each item
+    if (Array.isArray(songs)) {
+      for (let i = 0; i < songs.length; i++) {
+        const s = songs[i] || {};
+        if (!s.title || typeof s.title !== 'string') throw new ValidationError(`Song at index ${i} must have a string 'title'.`);
+        if (!s.artist || typeof s.artist !== 'string') throw new ValidationError(`Song at index ${i} must have a string 'artist'.`);
+      }
+    }
+
+    return next();
+  } catch (err) {
+    return next(err);
+  }
 }
 
 function validateSong(req, res, next) {
-  const { title, artist } = req.body || {};
+  try {
+    const { title, artist } = req.body || {};
 
-  if (!title || typeof title !== "string") {
-    return res.status(400).json({ error: "Song 'title' is required and must be a string." });
+    if (!title || typeof title !== 'string') {
+      throw new ValidationError("Song 'title' is required and must be a string.");
+    }
+
+    if (!artist || typeof artist !== 'string') {
+      throw new ValidationError("Song 'artist' is required and must be a string.");
+    }
+
+    return next();
+  } catch (err) {
+    return next(err);
   }
-
-  if (!artist || typeof artist !== "string") {
-    return res.status(400).json({ error: "Song 'artist' is required and must be a string." });
-  }
-
-  return next();
 }
 
-module.exports = { validatePlaylist, validateSong };
+module.exports = { validatePlaylist, validateSong, ValidationError };

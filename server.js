@@ -50,26 +50,34 @@ app.use((req, res, next) => {
 
 // --- Route validation middlewares ---
 const validatePlaylistMiddleware = (req, res, next) => {
-  const { playlistId } = req.params;
-  if (playlistId && !validateObjectId(playlistId)) {
-    return res.status(400).json({ error: "Invalid playlist ID" });
+  try {
+    const { playlistId } = req.params;
+    if (playlistId && !validateObjectId(playlistId)) {
+      throw new ValidationError('Invalid playlist ID');
+    }
+    return next();
+  } catch (err) {
+    return next(err);
   }
-  return next();
 };
 
 const validateUserMiddleware = (req, res, next) => {
-  const { userId, username } = req.params;
-  if (userId && !validateObjectId(userId)) {
-    return res.status(400).json({ error: "Invalid user ID" });
+  try {
+    const { userId, username } = req.params;
+    if (userId && !validateObjectId(userId)) {
+      throw new ValidationError('Invalid user ID');
+    }
+    if (username && !validateUsername(username)) {
+      throw new ValidationError('Invalid username format');
+    }
+    return next();
+  } catch (err) {
+    return next(err);
   }
-  if (username && !validateUsername(username)) {
-    return res.status(400).json({ error: "Invalid username format" });
-  }
-  return next();
 };
 
 // validators moved to middleware/validate.js
-const { validatePlaylist, validateSong } = require("./middleware/validate");
+const { validatePlaylist, validateSong, ValidationError } = require("./middleware/validate");
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");
@@ -322,8 +330,19 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
-  res.status(500).json({ error: "Server error" });
+  console.error("Error:", err && err.stack ? err.stack : err);
+
+  // If the error has a status (our ValidationError), use it
+  if (err && err.status && typeof err.status === 'number') {
+    return res.status(err.status).json({ error: err.message || 'Validation error' });
+  }
+
+  // Mongoose validation error
+  if (err && err.name === 'ValidationError') {
+    return res.status(400).json({ error: err.message });
+  }
+
+  res.status(500).json({ error: 'Server error' });
 });
 
 async function startServer() {
