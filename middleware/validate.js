@@ -14,6 +14,11 @@ function validatePlaylist(req, res, next) {
       throw new ValidationError("Playlist 'name' is required and must be a string.");
     }
 
+    // Enforce minimum name length (business rule): at least 6 characters
+    if (typeof name === 'string' && name.trim().length < 6) {
+      throw new ValidationError("Playlist 'name' must be at least 6 characters.");
+    }
+
     if (description && typeof description !== 'string') {
       throw new ValidationError("Playlist 'description' must be a string.");
     }
