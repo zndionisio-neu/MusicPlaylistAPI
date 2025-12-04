@@ -19,7 +19,7 @@ which is represented in **JSON**.
   - [Base Route](#base-route)
   - [GET Routes](#get-routes)
   - [POST Routes](#post-routes)
-  - [PUT Routes](#put-routes)
+  - [PATCH Routes](#patch-routes)
   - [DELETE Routes](#delete-routes)
 - [Request Examples](#request-examples)
 - [What Data do they return?](#what-data-do-they-return)
@@ -52,6 +52,10 @@ Get All Songs from a Playlist by SongID:
 
     /playlists/:playlistId/songs/:songId
 
+Get Songs from a Playlist by Title
+
+    /playlists/:playlistId/songs/title/:songTitle
+
 ### POST Routes
 
 Create a new Playlist:
@@ -62,7 +66,7 @@ Create a new Song:
 
     /playlists/:playlistId/songs
 
-### PUT Routes
+### PATCH Routes
 
 Update a Playlist:
 
@@ -70,7 +74,7 @@ Update a Playlist:
 
 Update a Song:
 
-    /playlists
+    /playlists/:playlistId/songs/:songId
 
 ### DELETE Routes
 
