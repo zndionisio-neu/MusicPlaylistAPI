@@ -11,7 +11,7 @@ const BASE_ENDPOINT = "/api/v1";
 
 require("dotenv").config();
 
-// Accept either MONGODB_URI or MONGO_URI
+
 const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 
 app.use(express.json({ limit: "10mb" }));
@@ -20,8 +20,6 @@ app.use(cors());
 app.use(helmet());
 
 const validateObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
-const validateUsername = (username) => /^[a-zA-Z0-9_]{3,30}$/.test(username);
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const sanitizeString = (str) => (typeof str === "string" ? str.trim() : str);
 
 app.use((req, res, next) => {
@@ -61,22 +59,7 @@ const validatePlaylistMiddleware = (req, res, next) => {
   }
 };
 
-const validateUserMiddleware = (req, res, next) => {
-  try {
-    const { userId, username } = req.params;
-    if (userId && !validateObjectId(userId)) {
-      throw new ValidationError('Invalid user ID');
-    }
-    if (username && !validateUsername(username)) {
-      throw new ValidationError('Invalid username format');
-    }
-    return next();
-  } catch (err) {
-    return next(err);
-  }
-};
 
-// validators moved to middleware/validate.js
 const { validatePlaylist, validateSong, ValidationError } = require("./middleware/validate");
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
