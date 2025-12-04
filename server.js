@@ -101,7 +101,7 @@ app.get(
 app.get(`${BASE_ENDPOINT}/playlists/name/:playlistName`, async (req, res) => {
   try {
     const playlist = await Playlist.find({
-      name: { $regex: req.params.playlistName, $options: "i" },
+      name: { $regex: req.params.playlistName.trim(), $options: "i" },
       deleted: false,
     }).select({ songs: 0 });
 
@@ -179,7 +179,8 @@ app.get(
         (song) =>
           song.title
             .toLowerCase()
-            .includes(req.params.songName.toLowerCase()) && !song.deleted,
+            .includes(req.params.songName.trim().toLowerCase()) &&
+          !song.deleted,
       );
 
       if (song.length === 0)
