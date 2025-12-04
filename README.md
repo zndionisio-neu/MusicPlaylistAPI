@@ -28,7 +28,7 @@ which is represented in **JSON**.
 
 ### Base Route:
 
-    https://domain.vercel.app/api/v1/
+    https://music-playlist-api.vercel.app/api/v1/
 
 ### GET Routes
 
@@ -91,25 +91,25 @@ Delete a Song by ID:
 **GET** Request:
 
 ```bash
-curl https://domain.vercel.app/api/v1/playlists
+curl https://music-playlist-api.vercel.app/api/v1/playlists
 ```
 
 **POST** Request:
 
 ```bash
-curl -X POST https://domain.vercel.app/api/v1/playlists -H "Content-Type: application/json" -d '{"title": "Japanese Playlist", "author": "Z"}'
+curl -X POST https://music-playlist-api.vercel.app/api/v1/playlists -H "Content-Type: application/json" -d '{"title": "Japanese Playlist", "author": "Z"}'
 ```
 
 **PUT** Request:
 
 ```bash
-curl -X PUT https://domain.vercel.app/api/v1/playlists/pl4yl1s71D -H "Content-Type: application/json" -d '{"title": "Ballad Playlist"}'
+curl -X PUT https://music-playlist-api.vercel.app/api/v1/playlists/pl4yl1s71D -H "Content-Type: application/json" -d '{"title": "Ballad Playlist"}'
 ```
 
 **DELETE** Request:
 
 ```bash
-curl -X DELETE https://domain.vercel.app/api/v1/playlists/pl4yl1s71D
+curl -X DELETE https://music-playlist-api.vercel.app/api/v1/playlists/pl4yl1s71D
 ```
 
 ## What Data do they return?
