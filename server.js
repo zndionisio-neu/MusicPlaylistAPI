@@ -164,7 +164,7 @@ app.get(
 
 // GET Songs by Name
 app.get(
-  `${BASE_ENDPOINT}/playlists/:playlistId/songs/title/:songName`,
+  `${BASE_ENDPOINT}/playlists/:playlistId/songs/title/:songTitle`,
   async (req, res) => {
     try {
       const playlist = await Playlist.findOne({
@@ -179,7 +179,7 @@ app.get(
         (song) =>
           song.title
             .toLowerCase()
-            .includes(req.params.songName.trim().toLowerCase()) &&
+            .includes(req.params.songTitle.trim().toLowerCase()) &&
           !song.deleted,
       );
 
