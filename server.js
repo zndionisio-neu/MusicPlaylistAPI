@@ -51,16 +51,13 @@ const validatePlaylistMiddleware = (req, res, next) => {
   try {
     const { playlistId } = req.params;
     if (playlistId && !validateObjectId(playlistId)) {
-      throw new ValidationError('Invalid playlist ID');
+      return next({ status: 400, message: 'Invalid playlist ID' });
     }
     return next();
   } catch (err) {
     return next(err);
   }
 };
-
-
-const { validatePlaylist, validateSong, ValidationError } = require("./middleware/validate");
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");
@@ -158,7 +155,7 @@ app.get(
 );
 
 // POST a playlist
-app.post(`${BASE_ENDPOINT}/playlists`, validatePlaylist, async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists`, async (req, res) => {
   try {
     const playlist = new Playlist(req.body);
     await playlist.save();
@@ -172,7 +169,7 @@ app.post(`${BASE_ENDPOINT}/playlists`, validatePlaylist, async (req, res) => {
 });
 
 // POST a song in a playlist
-app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddleware, validateSong, async (req, res) => {
+app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddleware, async (req, res) => {
   const song = req.body;
   try {
     const playlist = await Playlist.findById(req.params.playlistId);
@@ -193,7 +190,7 @@ app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddlew
 });
 
 // UPDATE a playlist's information
-app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, validatePlaylist, async (req, res) => {
+app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, async (req, res) => {
   if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
   try {
     const playlist = await Playlist.findOneAndUpdate(
@@ -221,7 +218,6 @@ app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, va
 app.put(
   `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
   validatePlaylistMiddleware,
-  validateSong,
   async (req, res) => {
     if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
     try {
