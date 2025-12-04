@@ -172,8 +172,9 @@ app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, async (req, res) => {
 });
 
 // UPDATE a playlist's information
-app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
+app.patch(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
   if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
+
   try {
     const playlist = await Playlist.findOneAndUpdate(
       {
@@ -187,7 +188,7 @@ app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
     if (!playlist || playlist.deleted)
       return res.status(404).json({ message: "Playlist not found." });
 
-    return res.status(201).json({
+    return res.status(200).json({
       message: "Playlist has been updated",
       document: playlist,
     });
@@ -197,10 +198,11 @@ app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, async (req, res) => {
 });
 
 // UPDATE a song's information
-app.put(
+app.patch(
   `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
   async (req, res) => {
     if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
+
     try {
       const playlist = await Playlist.findOne({
         _id: req.params.playlistId,
@@ -214,13 +216,10 @@ app.put(
       if (!song || song.deleted === true)
         return res.status(404).json({ message: "Song not found." });
 
-      if (req.body.title) song.title = req.body.title;
-      if (req.body.artist) song.artist = req.body.artist;
+      Object.assign(song, req.body);
+      await playlist.save();
 
-      // Object.assign(song, req.params.body);
-      playlist.save();
-
-      return res.status(201).json({
+      return res.status(200).json({
         message: "Song has been updated",
         document: song,
       });
