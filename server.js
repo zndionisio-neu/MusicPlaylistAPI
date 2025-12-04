@@ -61,7 +61,7 @@ const validatePlaylistMiddleware = (req, res, next) => {
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");
-  res.status(200);
+  res.status(200).json({ message: "Welcome to Music Playlist API!" });
 });
 
 // GET all playlists
@@ -326,6 +326,13 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   try {
+    // Allow skipping MongoDB connection for local smoke tests by setting SKIP_DB=true
+    if (process.env.SKIP_DB === 'true') {
+      console.log('SKIP_DB=true — skipping MongoDB connection and starting server without DB');
+      app.listen(PORT, () => console.log(`Music Playlist API is running on port ${PORT} (no DB)`));
+      return;
+    }
+
     if (!MONGO_URI) {
       console.error("Failed to connect: MONGODB_URI or MONGO_URI is not set.");
       return;
