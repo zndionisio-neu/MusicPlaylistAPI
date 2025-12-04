@@ -154,6 +154,34 @@ app.get(
   },
 );
 
+// GET Songs by Name
+app.get(
+  `${BASE_ENDPOINT}/playlists/:playlistId/songs/title/:songName`,
+  async (req, res) => {
+    try {
+      const playlist = await Playlist.findOne({
+        _id: req.params.playlistId,
+        deleted: false,
+      });
+
+      if (!playlist || playlist.deleted)
+        return res.status(404).json({ message: "Playlist not found." });
+
+      const song = playlist.songs.filter(
+        (song) =>
+          song.title
+            .toLowerCase()
+            .includes(req.params.songName.toLowerCase()) && !song.deleted,
+      );
+
+      if (!song) return res.status(404).json({ message: "Song not found." });
+      res.status(200).json(song);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+);
+
 // POST a playlist
 app.post(`${BASE_ENDPOINT}/playlists`, async (req, res) => {
   try {
@@ -190,8 +218,9 @@ app.post(`${BASE_ENDPOINT}/playlists/:playlistId/songs`, validatePlaylistMiddlew
 });
 
 // UPDATE a playlist's information
-app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, async (req, res) => {
+app.patch(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, async (req, res) => {
   if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
+
   try {
     const playlist = await Playlist.findOneAndUpdate(
       {
@@ -205,7 +234,7 @@ app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, as
     if (!playlist || playlist.deleted)
       return res.status(404).json({ message: "Playlist not found." });
 
-    return res.status(201).json({
+    return res.status(200).json({
       message: "Playlist has been updated",
       document: playlist,
     });
@@ -215,11 +244,12 @@ app.put(`${BASE_ENDPOINT}/playlists/:playlistId`, validatePlaylistMiddleware, as
 });
 
 // UPDATE a song's information
-app.put(
+app.patch(
   `${BASE_ENDPOINT}/playlists/:playlistId/songs/:songId`,
   validatePlaylistMiddleware,
   async (req, res) => {
     if (req.body.hasOwnProperty("deleted")) delete req.body.deleted;
+
     try {
       const playlist = await Playlist.findOne({
         _id: req.params.playlistId,
@@ -233,13 +263,10 @@ app.put(
       if (!song || song.deleted === true)
         return res.status(404).json({ message: "Song not found." });
 
-      if (req.body.title) song.title = req.body.title;
-      if (req.body.artist) song.artist = req.body.artist;
+      Object.assign(song, req.body);
+      await playlist.save();
 
-      // Object.assign(song, req.params.body);
-      playlist.save();
-
-      return res.status(201).json({
+      return res.status(200).json({
         message: "Song has been updated",
         document: song,
       });
