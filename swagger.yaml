@@ -1,0 +1,280 @@
+openapi: 3.0.0
+info:
+  title: Music Playlist API
+  description: API Documentation
+  version: 1.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local server
+
+paths:
+  /api/v1/:
+    get:
+      summary: Returns a greeting
+      responses:
+        200:
+          description: Greeting Response
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Welcome!"
+
+  /api/v1/playlists:
+    get:
+      summary: Get all playlists
+      responses:
+        200:
+          description: List of playlists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Playlist"
+    post:
+      summary: Create a new playlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaylistCreate"
+      responses:
+        201:
+          description: Created playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+
+  /api/v1/playlists/{playlistId}:
+    parameters:
+      - name: playlistId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Playlist ID
+    get:
+      summary: Get a playlist by ID
+      responses:
+        200:
+          description: Playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+        404:
+          description: Playlist not found
+    put:
+      summary: Update a playlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaylistUpdate"
+      responses:
+        200:
+          description: Updated playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+        404:
+          description: Playlist not found
+    delete:
+      summary: Delete a playlist
+      responses:
+        204:
+          description: Playlist deleted
+        404:
+          description: Playlist not found
+
+  /api/v1/playlists/name/{playlistName}:
+    get:
+      summary: Get playlists by name
+      parameters:
+        - name: playlistName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Playlists with this name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Playlist"
+
+  /api/v1/playlists/{playlistId}/songs:
+    parameters:
+      - name: playlistId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Playlist ID
+    get:
+      summary: Get all songs in a playlist
+      responses:
+        200:
+          description: Songs in playlist
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Song"
+    post:
+      summary: Create a new song in playlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SongInput"
+      responses:
+        201:
+          description: Created song
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Song"
+
+  /api/v1/playlists/{playlistId}/songs/{songId}:
+    parameters:
+      - name: playlistId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Playlist ID
+      - name: songId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Song ID
+    get:
+      summary: Get a song from a playlist
+      responses:
+        200:
+          description: Song
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Song"
+        404:
+          description: Song not found
+    delete:
+      summary: Delete a song from a playlist
+      responses:
+        204:
+          description: Song deleted
+        404:
+          description: Song not found
+
+components:
+  schemas:
+    Song:
+      type: object
+      properties:
+        _id:
+          type: string
+          readOnly: true
+        title:
+          type: string
+        artist:
+          type: string
+        deleted:
+          type: boolean
+          writeOnly: true
+          description: Soft-delete flag, hidden in responses.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - title
+        - artist
+
+    SongInput:
+      type: object
+      properties:
+        title:
+          type: string
+        artist:
+          type: string
+        deleted:
+          type: boolean
+          description: Optional soft-delete flag.
+      required:
+        - title
+        - artist
+
+    Playlist:
+      type: object
+      properties:
+        _id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        songs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Song"
+        author:
+          type: string
+        deleted:
+          type: boolean
+          writeOnly: true
+          description: Soft-delete flag, hidden in responses.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - name
+        - author
+
+    PlaylistCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        author:
+          type: string
+        songs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SongInput"
+      required:
+        - name
+        - author
+
+    PlaylistUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        author:
+          type: string
+        songs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SongInput"
