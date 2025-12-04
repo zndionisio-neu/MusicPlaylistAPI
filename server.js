@@ -2,6 +2,13 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const path = require("path");
+const swaggerUI = require("swagger-ui-express");
+const swaggerDist = require("swagger-ui-dist");
+const yaml = require("yamljs");
+
+const swaggerPath = path.join(__dirname, "swagger.yaml");
+const swaggerDoc = yaml.load(swaggerPath);
 const Playlist = require("./models/playlist.model");
 
 const app = express();
@@ -12,11 +19,6 @@ const BASE_ENDPOINT = "/api/v1";
 require("dotenv").config();
 
 const MONGODB_URI = process.env.MONGODB_URI;
-
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-app.use(helmet());
 
 const validateObjectId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
 const sanitizeString = (str) => (typeof str === "string" ? str.trim() : str);
@@ -41,8 +43,6 @@ const sanitizeRequestData = (req, res, next) => {
   }
 };
 
-app.use(sanitizeRequestData);
-
 // --- Route validation middlewares ---
 const validatePlaylistMiddleware = (req, res, next) => {
   try {
@@ -55,6 +55,36 @@ const validatePlaylistMiddleware = (req, res, next) => {
     return next(err);
   }
 };
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+
+app.use(
+  `${BASE_ENDPOINT}/api-docs`,
+  express.static(swaggerDist.getAbsoluteFSPath()),
+);
+
+app.get(`${BASE_ENDPOINT}/api-docs/swagger.yaml`, (req, res) => {
+  res.sendFile(swaggerPath);
+});
+
+app.use(
+  `${BASE_ENDPOINT}/api-docs`,
+  swaggerUI.serve,
+  swaggerUI.setup(swaggerDoc, {
+    swaggerOptions: {
+      url: `${BASE_ENDPOINT}/api-docs/swagger.yaml`,
+    },
+  }),
+);
+
+app.use(helmet());
+app.use(sanitizeRequestData);
+
+app.get("/", (_, res) => {
+  res.redirect(`${BASE_ENDPOINT}/api-docs`);
+});
 
 app.get(`${BASE_ENDPOINT}/`, (_, res) => {
   console.log("Welcome to Music Playlist API!");

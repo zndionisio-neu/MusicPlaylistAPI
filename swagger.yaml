@@ -5,8 +5,8 @@ info:
   version: 1.0
 
 servers:
-  - url: http://localhost:3000
-    description: Local server
+  - url: https://music-playlist-api.vercel.app/
+    description: Deployed Server
 
 paths:
   /api/v1/:
@@ -19,7 +19,7 @@ paths:
             application/json:
               schema:
                 type: string
-                example: "Welcome!"
+                example: "Welcome to Music Playlist API!"
 
   /api/v1/playlists:
     get:
@@ -68,7 +68,7 @@ paths:
                 $ref: "#/components/schemas/Playlist"
         404:
           description: Playlist not found
-    put:
+    patch:
       summary: Update a playlist
       requestBody:
         required: true
@@ -172,11 +172,54 @@ paths:
                 $ref: "#/components/schemas/Song"
         404:
           description: Song not found
+    patch:
+      summary: Update a song in a playlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SongUpdate"
+      responses:
+        200:
+          description: Updated song
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Song"
+        404:
+          description: Song not found
     delete:
       summary: Delete a song from a playlist
       responses:
         204:
           description: Song deleted
+        404:
+          description: Song not found
+
+  /api/v1/playlists/{playlistId}/songs/title/{songTitle}:
+    parameters:
+      - name: playlistId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Playlist ID
+      - name: songTitle
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Song Title
+    get:
+      summary: Get a songs from a playlist by title
+      responses:
+        200:
+          description: Song
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Song"
         404:
           description: Song not found
 
