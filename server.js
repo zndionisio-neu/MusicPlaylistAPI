@@ -108,6 +108,34 @@ app.get(
   },
 );
 
+// GET Songs by Name
+app.get(
+  `${BASE_ENDPOINT}/playlists/:playlistId/songs/title/:songName`,
+  async (req, res) => {
+    try {
+      const playlist = await Playlist.findOne({
+        _id: req.params.playlistId,
+        deleted: false,
+      });
+
+      if (!playlist || playlist.deleted)
+        return res.status(404).json({ message: "Playlist not found." });
+
+      const song = playlist.songs.filter(
+        (song) =>
+          song.title
+            .toLowerCase()
+            .includes(req.params.songName.toLowerCase()) && !song.deleted,
+      );
+
+      if (!song) return res.status(404).json({ message: "Song not found." });
+      res.status(200).json(song);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+);
+
 // POST a playlist
 app.post(`${BASE_ENDPOINT}/playlists`, async (req, res) => {
   try {
